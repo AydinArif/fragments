@@ -11,5 +11,8 @@
     "url": "git+https://github.com/AydinArif/fragments.git"
   },
   "author": "Aydin Arif",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
 }
