@@ -1,8 +1,8 @@
 {
   "name": "fragments",
-  "version": "1.0.0",
-  "description": "Created by Aydin Arif",
-  "main": "index.js",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Fragments back-end API",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,12 +10,6 @@
     "type": "git",
     "url": "git+https://github.com/AydinArif/fragments.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/AydinArif/fragments/issues"
-  },
-  "homepage": "https://github.com/AydinArif/fragments#readme"
+  "author": "Aydin Arif",
+  "license": "UNLICENSED"
 }
