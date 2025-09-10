@@ -1,4 +1,4 @@
-# Project Name
+# Express App
 
 This repository contains the API Server built using Node.js and Express. The project follows best practices for structuring an Express application and includes scripts for setup, running, and development.
 
