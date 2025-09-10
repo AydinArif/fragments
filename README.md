@@ -82,7 +82,7 @@ LOG_LEVEL=debug
 
 ## Notes
 - Any new dependencies installed via `npm install <package>` will update both `package.json` and `package-lock.json`.
-- Always commit both files to ensure teammates use the same versions.
+- Always commit all changes made to files to ensure the latest version of your files are accessible.
 
 ---
 
