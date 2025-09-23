@@ -3,18 +3,20 @@
 const express = require('express');
 const { version, author } = require('../../package.json');
 const { authenticate } = require('../auth');
+const { createSuccessResponse } = require('../response');
 
 const router = express.Router();
 
 // Health check route
 router.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
-  res.status(200).json({
-    status: 'ok',
-    author,
-    githubUrl: 'https://github.com/AydinArif/fragments',
-    version,
-  });
+  res.status(200).json(
+    createSuccessResponse({
+      author,
+      githubUrl: 'https://github.com/AydinArif/fragments',
+      version,
+    })
+  );
 });
 
 // Protect all /v1/* routes with authentication
