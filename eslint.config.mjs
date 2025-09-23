@@ -1,3 +1,5 @@
+// eslint.config.mjs
+
 import js from "@eslint/js";
 import globals from "globals";
 
@@ -7,11 +9,12 @@ export default [
     languageOptions: {
       globals: {
         ...globals.node,
+        ...globals.jest, // Added Jest globals to avoid lint issues
       },
     },
     rules: {
-      ...js.configs.recommended.rules, // enable eslint:recommended
-      "no-unused-vars": "error",       // explicitly enforce unused vars
+      ...js.configs.recommended.rules, 
+      "no-unused-vars": "error",      
     },
   },
 ];
