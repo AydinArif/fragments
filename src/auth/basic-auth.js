@@ -1,16 +1,15 @@
 // src/auth/basic-auth.js
-const logger = require('../logger');          
 const auth = require('http-auth');
-// eslint-disable-next-line no-unused-vars
-const passport = require('passport');
 const authPassport = require('http-auth-passport');
-const authorize = require('./auth-middleware');  
+const logger = require('../logger');
+
+// ✅ Import authorize middleware
+const authorize = require('./auth-middleware');
 
 if (!process.env.HTPASSWD_FILE) {
   throw new Error('missing expected env var: HTPASSWD_FILE');
 }
 
-// Log that we're using Basic Auth
 logger.info('Using HTTP Basic Auth for auth');
 
 module.exports.strategy = () =>
@@ -20,5 +19,5 @@ module.exports.strategy = () =>
     })
   );
 
-// ✅ Use authorize wrapper instead of passport.authenticate()
+// ✅ Delegate to authorize middleware instead of direct passport.authenticate()
 module.exports.authenticate = () => authorize('http');

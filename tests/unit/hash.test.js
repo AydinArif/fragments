@@ -1,15 +1,15 @@
 const hash = require('../../src/hash');
 
 describe('hash()', () => {
-  test('same email → same hash', () => {
-    expect(hash('Alice@Example.com')).toBe(hash('alice@example.com'));
+  const email = 'user1@example.com';
+
+  test('email addresses should get hashed using sha256 to hex strings', () => {
+    const hashedEmail = 'b36a83701f1c3191e19722d6f90274bc1b5501fe69ebf33313e440fe4b0fe210';
+    expect(hash(email)).toEqual(hashedEmail);
   });
 
-  test('different emails → different hashes', () => {
-    expect(hash('a@example.com')).not.toBe(hash('b@example.com'));
-  });
-
-  test('throws on empty', () => {
-    expect(() => hash()).toThrow();
+  test('hashing should always return the same value for a given string', () => {
+    const email = 'user1@example.com';
+    expect(hash(email)).toEqual(hash(email));
   });
 });

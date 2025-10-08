@@ -7,13 +7,16 @@ const logger = require('../../logger');
 /**
  * GET /v1/fragments
  * Returns a list of fragments for the authenticated user.
+ * If `?expand=1` is passed, returns full metadata for each fragment.
  */
 module.exports = async (req, res) => {
   try {
     const ownerId = req.user;
-    logger.debug({ ownerId }, 'Fetching fragments for user');
+    const expand = req.query.expand === '1';
 
-    const fragments = await Fragment.byUser(ownerId);
+    logger.debug({ ownerId, expand }, 'Fetching fragments for user');
+
+    const fragments = await Fragment.byUser(ownerId, expand);
 
     res.status(200).json(
       createSuccessResponse({

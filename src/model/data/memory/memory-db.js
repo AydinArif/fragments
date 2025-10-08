@@ -1,72 +1,98 @@
 // src/model/data/memory/memory-db.js
-/**
- * In-Memory database for storing fragments and their raw data.
- * Uses a simple Map keyed by ownerId and fragment id.
- */
-
-const memory = new Map();
 
 /**
- * Write (or update) a fragment’s metadata.
- * @param {string} ownerId
- * @param {object} fragment
+ * A simple in-memory key-value store with primary/secondary keys.
+ * Each primary key maps to an object of secondary keys → values.
  */
-async function writeFragment(ownerId, fragment) {
-  if (!ownerId || !fragment?.id) {
-    throw new Error('ownerId and fragment.id are required');
+
+const validateKey = (key) => typeof key === 'string';
+
+class MemoryDB {
+  constructor() {
+    /** @type {Record<string, any>} */
+    this.db = {};
   }
-  const ownerFragments = memory.get(ownerId) || {};
-  ownerFragments[fragment.id] = { ...ownerFragments[fragment.id], ...fragment };
-  memory.set(ownerId, ownerFragments);
-  return ownerFragments[fragment.id];
+
+  /**
+   * Gets a value for the given primaryKey and secondaryKey
+   * @param {string} primaryKey
+   * @param {string} secondaryKey
+   * @returns {Promise<any>}
+   */
+  get(primaryKey, secondaryKey) {
+    if (!(validateKey(primaryKey) && validateKey(secondaryKey))) {
+      throw new Error(
+        `primaryKey and secondaryKey strings are required, got primaryKey=${primaryKey}, secondaryKey=${secondaryKey}`
+      );
+    }
+
+    const db = this.db;
+    const value = db[primaryKey] && db[primaryKey][secondaryKey];
+    return Promise.resolve(value);
+  }
+
+  /**
+   * Puts a value into the given primaryKey and secondaryKey
+   * @param {string} primaryKey
+   * @param {string} secondaryKey
+   * @param {any} value
+   * @returns {Promise<void>}
+   */
+  put(primaryKey, secondaryKey, value) {
+    if (!(validateKey(primaryKey) && validateKey(secondaryKey))) {
+      throw new Error(
+        `primaryKey and secondaryKey strings are required, got primaryKey=${primaryKey}, secondaryKey=${secondaryKey}`
+      );
+    }
+
+    const db = this.db;
+    // Ensure the primary key exists
+    db[primaryKey] = db[primaryKey] || {};
+    // Store the value under the secondary key
+    db[primaryKey][secondaryKey] = value;
+    return Promise.resolve();
+  }
+
+  /**
+   * Queries the list of values for the given primaryKey.
+   * Always returns an array (even if empty).
+   * @param {string} primaryKey
+   * @returns {Promise<any[]>}
+   */
+  query(primaryKey) {
+    if (!validateKey(primaryKey)) {
+      throw new Error(`primaryKey string is required, got primaryKey=${primaryKey}`);
+    }
+
+    const db = this.db;
+    const values = db[primaryKey] ? Object.values(db[primaryKey]) : [];
+    return Promise.resolve(values);
+  }
+
+  /**
+   * Deletes the value with the given primaryKey and secondaryKey.
+   * @param {string} primaryKey
+   * @param {string} secondaryKey
+   * @returns {Promise<void>}
+   */
+  async del(primaryKey, secondaryKey) {
+    if (!(validateKey(primaryKey) && validateKey(secondaryKey))) {
+      throw new Error(
+        `primaryKey and secondaryKey strings are required, got primaryKey=${primaryKey}, secondaryKey=${secondaryKey}`
+      );
+    }
+
+    // Throw if the key doesn't exist
+    if (!(await this.get(primaryKey, secondaryKey))) {
+      throw new Error(
+        `missing entry for primaryKey=${primaryKey} and secondaryKey=${secondaryKey}`
+      );
+    }
+
+    const db = this.db;
+    delete db[primaryKey][secondaryKey];
+    return Promise.resolve();
+  }
 }
 
-/**
- * Read a fragment’s metadata.
- * @returns {object|null}
- */
-async function readFragment(ownerId, id) {
-  if (!memory.has(ownerId)) return null;
-  const ownerFragments = memory.get(ownerId);
-  return ownerFragments[id] || null;
-}
-
-/**
- * Write raw data buffer for a fragment.
- */
-async function writeFragmentData(ownerId, id, data) {
-  const key = `${ownerId}:${id}:data`;
-  memory.set(key, data);
-  return true;
-}
-
-/**
- * Read raw data buffer.
- */
-async function readFragmentData(ownerId, id) {
-  return memory.get(`${ownerId}:${id}:data`) || null;
-}
-
-/**
- * List fragment IDs for an owner.
- */
-async function listFragments(ownerId) {
-  if (!memory.has(ownerId)) return [];
-  return Object.keys(memory.get(ownerId));
-}
-
-/**
- * Delete all data (for tests).
- */
-async function clear() {
-  memory.clear();
-}
-
-module.exports = {
-  writeFragment,
-  readFragment,
-  writeFragmentData,
-  readFragmentData,
-  listFragments,
-  clear,
-};
+module.exports = MemoryDB;
