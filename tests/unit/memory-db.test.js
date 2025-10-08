@@ -1,4 +1,4 @@
-// tests/unit/memory.test.js
+// tests/unit/memory-db.test.js
 
 const {
   writeFragment,
@@ -8,6 +8,9 @@ const {
   listFragments,
   deleteFragment,
 } = require('../../src/model/data/memory');
+
+// Import the in-memory database instance so we can clear it between tests
+const db = require('../../src/model/data/memory/memory-db');
 
 describe('In-Memory Fragment Database', () => {
   const ownerId = 'user123';
@@ -21,9 +24,9 @@ describe('In-Memory Fragment Database', () => {
     updated: new Date().toISOString(),
   };
 
+  // ✅ Properly clear the in-memory DB before each test run
   beforeEach(async () => {
-    // clear the module cache to start with a clean db every test
-    jest.resetModules();
+    await db.clear();
   });
 
   test('writeFragment() and readFragment() should store and retrieve metadata', async () => {

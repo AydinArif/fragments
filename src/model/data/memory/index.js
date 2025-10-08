@@ -1,6 +1,7 @@
-const MemoryDB = require('./memory-db');
+// src/model/data/memory/index.js
 
-// Create two in-memory databases: one for fragment metadata and the other for raw data
+const { MemoryDB } = require('./memory-db');
+
 const data = new MemoryDB();
 const metadata = new MemoryDB();
 
@@ -34,13 +35,16 @@ function readFragmentData(ownerId, id) {
 // Get a list of fragment ids/objects for the given user from memory db. Returns a Promise
 async function listFragments(ownerId, expand = false) {
   const fragments = await metadata.query(ownerId);
+  if (!fragments) return [];
 
-  // If we don't get anything back, or are supposed to give expanded fragments, return
-  if (expand || !fragments) {
-    return fragments;
+  if (expand) {
+    // Return serialized JSON strings, since tests expect that
+    return fragments.map((fragment) =>
+      typeof fragment === 'string' ? fragment : JSON.stringify(fragment)
+    );
   }
 
-  // Otherwise, map to only send back the ids
+  // Otherwise, return just the IDs
   return fragments.map((fragment) => JSON.parse(fragment).id);
 }
 

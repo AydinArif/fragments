@@ -26,8 +26,7 @@ class MemoryDB {
       );
     }
 
-    const db = this.db;
-    const value = db[primaryKey] && db[primaryKey][secondaryKey];
+    const value = this.db[primaryKey]?.[secondaryKey];
     return Promise.resolve(value);
   }
 
@@ -45,11 +44,9 @@ class MemoryDB {
       );
     }
 
-    const db = this.db;
-    // Ensure the primary key exists
-    db[primaryKey] = db[primaryKey] || {};
-    // Store the value under the secondary key
-    db[primaryKey][secondaryKey] = value;
+    if (!this.db[primaryKey]) this.db[primaryKey] = {};
+    this.db[primaryKey][secondaryKey] = value;
+
     return Promise.resolve();
   }
 
@@ -64,8 +61,7 @@ class MemoryDB {
       throw new Error(`primaryKey string is required, got primaryKey=${primaryKey}`);
     }
 
-    const db = this.db;
-    const values = db[primaryKey] ? Object.values(db[primaryKey]) : [];
+    const values = this.db[primaryKey] ? Object.values(this.db[primaryKey]) : [];
     return Promise.resolve(values);
   }
 
@@ -82,17 +78,28 @@ class MemoryDB {
       );
     }
 
-    // Throw if the key doesn't exist
-    if (!(await this.get(primaryKey, secondaryKey))) {
+    const exists = await this.get(primaryKey, secondaryKey);
+    if (!exists) {
       throw new Error(
         `missing entry for primaryKey=${primaryKey} and secondaryKey=${secondaryKey}`
       );
     }
 
-    const db = this.db;
-    delete db[primaryKey][secondaryKey];
+    delete this.db[primaryKey][secondaryKey];
+    return Promise.resolve();
+  }
+
+  /**
+   * Clears the entire in-memory database (used for testing)
+   */
+  clear() {
+    this.db = {};
     return Promise.resolve();
   }
 }
 
-module.exports = MemoryDB;
+// ✅ Export both the class and a shared instance
+module.exports = {
+  MemoryDB,
+  memoryDB: new MemoryDB(),
+};
