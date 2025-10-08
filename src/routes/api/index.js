@@ -12,4 +12,7 @@ const router = express.Router();
 router.get('/fragments', require('./get'));
 // Other routes (POST, DELETE, etc.) will go here later on...
 
+// POST /v1/fragments
+router.post('/fragments', require('./post'));
+
 module.exports = router;
