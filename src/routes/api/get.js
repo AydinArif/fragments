@@ -1,15 +1,27 @@
 // src/routes/api/get.js
 
-const { createSuccessResponse } = require('../../response');
+const { createSuccessResponse, createErrorResponse } = require('../../response');
+const Fragment = require('../../model/fragment');
+const logger = require('../../logger');
 
 /**
- * Get a list of fragments for the current user
+ * GET /v1/fragments
+ * Returns a list of fragments for the authenticated user.
  */
-module.exports = (req, res) => {
-  // TODO: replace placeholder with real fragments for the authenticated user
-  res.status(200).json(
-    createSuccessResponse({
-      fragments: [],
-    })
-  );
+module.exports = async (req, res) => {
+  try {
+    const ownerId = req.user;
+    logger.debug({ ownerId }, 'Fetching fragments for user');
+
+    const fragments = await Fragment.byUser(ownerId);
+
+    res.status(200).json(
+      createSuccessResponse({
+        fragments,
+      })
+    );
+  } catch (err) {
+    logger.error({ err }, 'Error listing fragments');
+    res.status(500).json(createErrorResponse(500, err.message));
+  }
 };
