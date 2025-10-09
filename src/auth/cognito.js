@@ -4,7 +4,6 @@ const BearerStrategy = require('passport-http-bearer').Strategy;
 const { CognitoJwtVerifier } = require('aws-jwt-verify');
 const logger = require('../logger');
 
-// ✅ Import the authorize middleware
 const authorize = require('./auth-middleware');
 
 // Verify environment variables
