@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+// src/model/fragment.js
 const hash = require('../hash');
 const {
   writeFragment,
@@ -10,17 +10,15 @@ const {
 } = require('./data/memory');
 const { v4: uuidv4 } = require('uuid');
 
-/**
- * Fragment class represents a user-created data fragment with metadata and raw data.
- */
 class Fragment {
   constructor({ id, ownerId, type, size = 0, created, updated }) {
     if (!ownerId) throw new Error('ownerId is required');
     if (!type) throw new Error('type is required');
     if (typeof size !== 'number' || size < 0)
       throw new Error('size must be a non-negative number');
+    if (!Fragment.isSupportedType(type))
+      throw new Error(`unsupported type: ${type}`);
 
-    // Always store the plain ownerId (email); hash only when calling DB
     this.id = id || uuidv4();
     this.ownerId = ownerId;
     this.type = type;
@@ -29,14 +27,7 @@ class Fragment {
     this.updated = updated || new Date().toISOString();
   }
 
-  // Supported MIME types
-  static SUPPORTED_TYPES = [
-    'text/plain',
-    'text/plain; charset=utf-8',
-    'text/markdown',
-    'text/html',
-    'application/json',
-  ];
+  static SUPPORTED_TYPES = ['text/plain', 'text/plain; charset=utf-8'];
 
   static isSupportedType(type) {
     return this.SUPPORTED_TYPES.some((supported) =>
@@ -53,7 +44,6 @@ class Fragment {
   }
 
   get formats() {
-    // Only return full list for Markdown or HTML; others stay specific
     if (this.type === 'text/plain' || this.type === 'text/plain; charset=utf-8') {
       return ['text/plain'];
     }
@@ -64,15 +54,13 @@ class Fragment {
   }
 
   async save() {
-    const ownerHash = hash(this.ownerId); // ✅ ensure hashed key
+    const ownerHash = hash(this.ownerId);
     this.updated = new Date().toISOString();
     await writeFragment(ownerHash, this);
   }
 
   async setData(data) {
-    if (!Buffer.isBuffer(data)) {
-      throw new Error('Data must be a Buffer');
-    }
+    if (!Buffer.isBuffer(data)) throw new Error('Data must be a Buffer');
     const ownerHash = hash(this.ownerId);
     await writeFragmentData(ownerHash, this.id, data);
     this.size = data.length;
@@ -90,15 +78,27 @@ class Fragment {
     await deleteFragment(ownerHash, this.id);
   }
 
+  static async delete(ownerId, id) {
+    const ownerHash = hash(ownerId);
+    await deleteFragment(ownerHash, id);
+  }
+
   static async byUser(ownerId, expand = false) {
     const ownerHash = hash(ownerId);
-    return await listFragments(ownerHash, expand);
+    const list = await listFragments(ownerHash, expand);
+    if (expand) {
+      return list.map((json) => new Fragment(JSON.parse(json)));
+    }
+    return list;
   }
 
   static async byId(ownerId, id) {
-    const ownerHash = hash(ownerId);
-    const data = await readFragment(ownerHash, id);
-    if (!data) return null;
+    // If ownerId already looks like a hash, don't hash again
+    const isHashed = /^[a-f0-9]{64}$/.test(ownerId);
+    const ownerKey = isHashed ? ownerId : hash(ownerId);
+
+    const data = await readFragment(ownerKey, id);
+    if (!data) throw new Error('Fragment not found');
     return new Fragment(data);
   }
 }
