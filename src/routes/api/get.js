@@ -17,6 +17,7 @@ module.exports = async (req, res) => {
     logger.debug({ ownerId, expand }, 'Fetching fragments for user');
 
     const fragments = await Fragment.byUser(ownerId, expand);
+    res.status(200).json(createSuccessResponse({ fragments: fragments || [] }));
 
     res.status(200).json(
       createSuccessResponse({

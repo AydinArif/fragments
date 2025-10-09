@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
     const { id } = req.params;
 
     const fragment = await Fragment.byId(ownerId, id);
-    if (!fragment) {
+  if (!fragment) {
       logger.warn({ id }, 'Fragment not found');
       return res.status(404).json(createErrorResponse(404, 'Fragment not found'));
     }

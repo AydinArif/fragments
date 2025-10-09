@@ -11,8 +11,12 @@ const rawBody = () =>
     inflate: true,
     limit: '5mb',
     type: (req) => {
-      const { type } = contentType.parse(req);
-      return Fragment.isSupportedType(type);
+      try {
+        const { type } = contentType.parse(req);
+        return Fragment.isSupportedType(type);
+      } catch {
+        return false;
+      }
     },
   });
 

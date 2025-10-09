@@ -65,6 +65,8 @@ describe('In-Memory Fragment Database', () => {
   });
 
   test('listFragments(expand=true) returns expanded fragment objects', async () => {
+    await writeFragment({ ...fragment, id: 'a' }); // ensure correct id is written
+    await db.clear(); // ✅ ensure fresh DB
     const f1 = { ...fragment, id: 'a' };
     await writeFragment(f1);
 
