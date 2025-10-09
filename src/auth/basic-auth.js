@@ -3,7 +3,6 @@ const auth = require('http-auth');
 const authPassport = require('http-auth-passport');
 const logger = require('../logger');
 
-// ✅ Import authorize middleware
 const authorize = require('./auth-middleware');
 
 if (!process.env.HTPASSWD_FILE) {
