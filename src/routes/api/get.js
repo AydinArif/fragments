@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
 
     const fragments = await Fragment.byUser(ownerId, expand);
 
-    // ✅ Send one clean success response
+    // Sends one single clean success response
     res.status(200).json(
       createSuccessResponse({
         fragments: fragments || [],
