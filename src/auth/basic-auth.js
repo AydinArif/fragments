@@ -18,5 +18,4 @@ module.exports.strategy = () =>
     })
   );
 
-// ✅ Delegate to authorize middleware instead of direct passport.authenticate()
 module.exports.authenticate = () => authorize('http');

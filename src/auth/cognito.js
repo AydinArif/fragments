@@ -35,6 +35,5 @@ module.exports.strategy = () =>
       done(null, false);
     }
   });
-
-// ✅ Now delegate to our custom authorization middleware
+  
 module.exports.authenticate = () => authorize('bearer');

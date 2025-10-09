@@ -57,9 +57,6 @@ class MemoryDB {
   }
 }
 
-// ✅ Export both:
-// - the class for use in `index.js`
-// - a shared instance as the default export (so tests can call db.clear())
 const sharedInstance = new MemoryDB();
 
 module.exports = sharedInstance;
