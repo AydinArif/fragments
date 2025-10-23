@@ -1,43 +1,50 @@
-# Dockerfile for Fragments Microservice
+# Dockerfile
 
-# This file defines how to build a Docker image of our fragments repository.
-# It installs dependencies, copies source code, sets environment variables,
-# and defines how to start the server when the container runs.
-
-# Using Node version matching local dev environment
-FROM node:22.12.0
+# -----------------------------
+# Stage 1 – Build dependencies
+# -----------------------------
+FROM node:22-alpine AS builder
 
 # Metadata
 LABEL maintainer="Aydin Arif <aarif24@myseneca.ca>"
-LABEL description="Fragments Node.js microservice"
+LABEL description="Fragments Node.js microservice (optimized build)"
 
 # Environment variables
-# We default to use port 8080 in our service
 ENV PORT=8080
-
-# Reduce npm spam when installing within Docker
 ENV NPM_CONFIG_LOGLEVEL=warn
-
-# Disable colour when ran inside Docker
 ENV NPM_CONFIG_COLOR=false
 
-# Create and use /app as working directory
+# Create working directory
 WORKDIR /app
 
-# Copy package definition files
+# Copy package files first for better caching
 COPY package*.json ./
 
-# Installing dependencies
-RUN npm install
+# Install only production dependencies
+RUN npm ci --only=production
 
-# Copy app source code
-COPY ./src ./src
+# Copy the rest of the app
+COPY . .
 
-# Copy the .htpasswd file for Basic Auth
-COPY ./tests/.htpasswd ./tests/.htpasswd
+# -----------------------------
+# Stage 2 – Production runtime
+# -----------------------------
+FROM node:22-alpine
 
-# Expose the port our service runs on
+# Set environment and workdir
+ENV NODE_ENV=production
+ENV PORT=8080
+WORKDIR /app
+
+# Copy built app and dependencies from builder
+COPY --from=builder /app /app
+
+# Add non-root user for better security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+# Expose port
 EXPOSE 8080
 
-# Default command to start the app
-CMD npm start
+# Start the app
+CMD ["npm", "start"]
