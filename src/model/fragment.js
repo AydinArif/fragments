@@ -27,11 +27,21 @@ class Fragment {
     this.updated = updated || new Date().toISOString();
   }
 
-  static SUPPORTED_TYPES = ['text/plain', 'text/plain; charset=utf-8'];
+  static SUPPORTED_TYPES = [
+    'text/plain',
+    'text/plain; charset=utf-8',
+    'text/markdown',
+    'text/html',
+    'text/csv',
+    'application/json',
+  ];
 
   static isSupportedType(type) {
-    return this.SUPPORTED_TYPES.some((supported) =>
-      type.toLowerCase().startsWith(supported.split(';')[0])
+    const baseType = type.toLowerCase().split(';')[0].trim();
+    return (
+      this.SUPPORTED_TYPES.some((supported) =>
+        baseType.startsWith(supported.split(';')[0])
+      ) || baseType === 'application/json'
     );
   }
 
@@ -40,12 +50,18 @@ class Fragment {
   }
 
   get isText() {
-    return this.mimeType.startsWith('text/') || this.mimeType === 'application/json';
+    return (
+      this.mimeType.startsWith('text/') ||
+      this.mimeType === 'application/json'
+    );
   }
 
   get formats() {
     if (this.type === 'text/plain' || this.type === 'text/plain; charset=utf-8') {
       return ['text/plain'];
+    }
+    if (this.mimeType === 'application/json') {
+      return ['application/json', 'text/plain'];
     }
     if (this.isText) {
       return ['text/plain', 'text/markdown', 'text/html', 'application/json'];
