@@ -52,9 +52,26 @@ class Fragment {
     return this.mimeType.startsWith('text/') || this.mimeType === 'application/json';
   }
 
+  // ✅ Fixed formats() method
   get formats() {
-    if (this.mimeType === 'application/json') return ['application/json', 'text/plain'];
-    if (this.isText) return ['text/plain', 'text/markdown', 'text/html', 'application/json'];
+    const baseType = this.mimeType;
+
+    // For plain text only
+    if (baseType === 'text/plain' || this.type === 'text/plain; charset=utf-8') {
+      return ['text/plain'];
+    }
+
+    // For JSON fragments
+    if (baseType === 'application/json') {
+      return ['application/json', 'text/plain'];
+    }
+
+    // For other text-based formats (markdown, html, etc.)
+    if (this.isText) {
+      return ['text/markdown', 'text/html', 'application/json'];
+    }
+
+    // For all other non-text formats
     return [this.type];
   }
 
@@ -116,4 +133,3 @@ class Fragment {
 
 module.exports = Fragment;
 module.exports.Fragment = Fragment;
-
