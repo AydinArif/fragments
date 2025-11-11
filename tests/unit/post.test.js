@@ -24,7 +24,6 @@ describe('POST /v1/fragments', () => {
     expect(res.headers.location).toMatch(/\/v1\/fragments\//);
   });
 
-  // ✅ Updated: now JSON is supported instead of rejected
   test('authenticated user can create an application/json fragment', async () => {
     const jsonData = { hi: 'there' };
     const res = await request(app)
@@ -39,7 +38,6 @@ describe('POST /v1/fragments', () => {
     expect(res.headers.location).toMatch(/\/v1\/fragments\//);
   });
 
-  // ✅ Still test unsupported types like image/png
   test('rejects truly unsupported content types', async () => {
     await request(app)
       .post('/v1/fragments')
