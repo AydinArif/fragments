@@ -1,5 +1,6 @@
 // src/model/fragment.js
 const hash = require('../hash');
+const logger = require('../logger');
 const {
   writeFragment,
   readFragment,
@@ -38,10 +39,8 @@ class Fragment {
 
   static isSupportedType(type) {
     const baseType = type.toLowerCase().split(';')[0].trim();
-    return (
-      this.SUPPORTED_TYPES.some((supported) =>
-        baseType.startsWith(supported.split(';')[0])
-      ) || baseType === 'application/json'
+    return this.SUPPORTED_TYPES.some((supported) =>
+      baseType.startsWith(supported.split(';')[0])
     );
   }
 
@@ -50,28 +49,19 @@ class Fragment {
   }
 
   get isText() {
-    return (
-      this.mimeType.startsWith('text/') ||
-      this.mimeType === 'application/json'
-    );
+    return this.mimeType.startsWith('text/') || this.mimeType === 'application/json';
   }
 
   get formats() {
-    if (this.type === 'text/plain' || this.type === 'text/plain; charset=utf-8') {
-      return ['text/plain'];
-    }
-    if (this.mimeType === 'application/json') {
-      return ['application/json', 'text/plain'];
-    }
-    if (this.isText) {
-      return ['text/plain', 'text/markdown', 'text/html', 'application/json'];
-    }
+    if (this.mimeType === 'application/json') return ['application/json', 'text/plain'];
+    if (this.isText) return ['text/plain', 'text/markdown', 'text/html', 'application/json'];
     return [this.type];
   }
 
   async save() {
     const ownerHash = hash(this.ownerId);
     this.updated = new Date().toISOString();
+    logger.debug({ ownerId: this.ownerId, ownerHash, id: this.id }, '💾 Saving fragment');
     await writeFragment(ownerHash, this);
   }
 
@@ -86,11 +76,13 @@ class Fragment {
 
   async getData() {
     const ownerHash = hash(this.ownerId);
+    logger.debug({ ownerId: this.ownerId, ownerHash, id: this.id }, '📖 Reading fragment data');
     return await readFragmentData(ownerHash, this.id);
   }
 
   async delete() {
     const ownerHash = hash(this.ownerId);
+    logger.debug({ ownerId: this.ownerId, ownerHash, id: this.id }, '🗑️ Deleting fragment');
     await deleteFragment(ownerHash, this.id);
   }
 
@@ -102,22 +94,26 @@ class Fragment {
   static async byUser(ownerId, expand = false) {
     const ownerHash = hash(ownerId);
     const list = await listFragments(ownerHash, expand);
-    if (expand) {
-      return list.map((json) => new Fragment(JSON.parse(json)));
-    }
+    if (expand) return list.map((json) => new Fragment(JSON.parse(json)));
     return list;
   }
 
   static async byId(ownerId, id) {
-    // If ownerId already looks like a hash, don't hash again
     const isHashed = /^[a-f0-9]{64}$/.test(ownerId);
     const ownerKey = isHashed ? ownerId : hash(ownerId);
+    logger.debug({ ownerId, ownerKey, isHashed, id }, '🔍 Looking up fragment byId()');
 
     const data = await readFragment(ownerKey, id);
-    if (!data) throw new Error('Fragment not found');
+    if (!data) {
+      logger.warn({ ownerId, ownerKey, id }, '⚠️ Fragment not found for owner');
+      throw new Error('Fragment not found');
+    }
+
+    logger.debug({ id, ownerKey }, '✅ Fragment found');
     return new Fragment(data);
   }
 }
 
 module.exports = Fragment;
 module.exports.Fragment = Fragment;
+
