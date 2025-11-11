@@ -24,12 +24,28 @@ describe('POST /v1/fragments', () => {
     expect(res.headers.location).toMatch(/\/v1\/fragments\//);
   });
 
-  test('rejects unsupported content types', async () => {
-    await request(app)
+  // ✅ Updated: now JSON is supported instead of rejected
+  test('authenticated user can create an application/json fragment', async () => {
+    const jsonData = { hi: 'there' };
+    const res = await request(app)
       .post('/v1/fragments')
       .auth('user1@email.com', 'password1')
       .set('Content-Type', 'application/json')
-      .send(JSON.stringify({ hi: 'there' }))
+      .send(JSON.stringify(jsonData));
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.status).toBe('ok');
+    expect(res.body.fragment.type).toBe('application/json');
+    expect(res.headers.location).toMatch(/\/v1\/fragments\//);
+  });
+
+  // ✅ Still test unsupported types like image/png
+  test('rejects truly unsupported content types', async () => {
+    await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'image/png')
+      .send('fakepngdata')
       .expect(415);
   });
 });
