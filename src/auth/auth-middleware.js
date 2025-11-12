@@ -25,7 +25,7 @@ module.exports = (strategyName) => {
         return res.status(401).json(createErrorResponse(401, 'Unauthorized'));
       }
 
-      // ✅ Just attach the raw user ID (email or Cognito sub)
+      // Attaching the raw user ID (email or Cognito sub)
       req.user = userId;
       logger.debug({ userId }, 'Authenticated user');
 

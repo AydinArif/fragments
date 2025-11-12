@@ -30,8 +30,7 @@ module.exports.strategy = () =>
     try {
       const user = await jwtVerifier.verify(token);
       logger.debug({ user }, 'verified user token');
-
-      // ✅ Use Cognito's unique user "sub" ID as ownerId
+      
       done(null, user.sub);
     } catch (err) {
       logger.error({ err, token }, 'could not verify token');

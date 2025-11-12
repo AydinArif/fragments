@@ -78,7 +78,7 @@ class Fragment {
   async save() {
     const ownerHash = hash(this.ownerId);
     this.updated = new Date().toISOString();
-    logger.debug({ ownerId: this.ownerId, ownerHash, id: this.id }, '💾 Saving fragment');
+    logger.debug({ ownerId: this.ownerId, ownerHash, id: this.id }, 'Saving fragment');
     await writeFragment(ownerHash, this);
   }
 
@@ -93,13 +93,13 @@ class Fragment {
 
   async getData() {
     const ownerHash = hash(this.ownerId);
-    logger.debug({ ownerId: this.ownerId, ownerHash, id: this.id }, '📖 Reading fragment data');
+    logger.debug({ ownerId: this.ownerId, ownerHash, id: this.id }, 'Reading fragment data');
     return await readFragmentData(ownerHash, this.id);
   }
 
   async delete() {
     const ownerHash = hash(this.ownerId);
-    logger.debug({ ownerId: this.ownerId, ownerHash, id: this.id }, '🗑️ Deleting fragment');
+    logger.debug({ ownerId: this.ownerId, ownerHash, id: this.id }, 'Deleting fragment');
     await deleteFragment(ownerHash, this.id);
   }
 
@@ -118,15 +118,15 @@ class Fragment {
   static async byId(ownerId, id) {
     const isHashed = /^[a-f0-9]{64}$/.test(ownerId);
     const ownerKey = isHashed ? ownerId : hash(ownerId);
-    logger.debug({ ownerId, ownerKey, isHashed, id }, '🔍 Looking up fragment byId()');
+    logger.debug({ ownerId, ownerKey, isHashed, id }, 'Looking up fragment byId()');
 
     const data = await readFragment(ownerKey, id);
     if (!data) {
-      logger.warn({ ownerId, ownerKey, id }, '⚠️ Fragment not found for owner');
+      logger.warn({ ownerId, ownerKey, id }, 'Fragment not found for owner');
       throw new Error('Fragment not found');
     }
 
-    logger.debug({ id, ownerKey }, '✅ Fragment found');
+    logger.debug({ id, ownerKey }, 'Fragment found');
     return new Fragment(data);
   }
 }

@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
       return res.status(404).json(createErrorResponse(404, 'No data found'));
     }
 
-    // ✅ Only support Markdown -> HTML conversion for A2
+    // Only supporting Markdown -> HTML conversion since A2 requirement
     if (ext === 'html' && fragment.type === 'text/markdown') {
       const html = md.render(data.toString());
       res.set('Content-Type', 'text/html');
@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
       return res.status(200).send(data);
     }
 
-    // ❌ Unsupported conversion
+    // Unsupported conversion
     res.status(415).json(
       createErrorResponse(
         415,
