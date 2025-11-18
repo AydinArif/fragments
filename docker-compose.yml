@@ -1,0 +1,29 @@
+services:
+  # Fragments microservice API server
+  fragments:
+    init: true
+    build: .
+    environment:
+      - API_URL=http://localhost:8080
+      - HTPASSWD_FILE=tests/.htpasswd
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    ports:
+      - "8080:8080"
+
+  # DynamoDB Local
+  dynamodb-local:
+    image: amazon/dynamodb-local
+    ports:
+      - "8000:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory"]
+
+  # LocalStack
+  localstack:
+    image: localstack/localstack
+    ports:
+      - "4566:4566"
+    environment:
+      # Only mock S3
+      - SERVICES=s3
+      # Default AWS region
+      - DEFAULT_REGION=us-east-1
