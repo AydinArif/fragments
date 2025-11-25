@@ -1,0 +1,70 @@
+{
+  "family": "fragments",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+
+  "executionRoleArn": "arn:aws:iam::368798317521:role/LabRole",
+  "taskRoleArn": "arn:aws:iam::368798317521:role/LabRole",
+
+  "containerDefinitions": [
+    {
+      "name": "fragments",
+      "image": "368798317521.dkr.ecr.us-east-1.amazonaws.com/fragments:latest",
+      
+      "portMappings": [
+        { "containerPort": 8080 }
+      ],
+      
+      "essential": true,
+
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "LOG_LEVEL",
+          "value": "info"
+        },
+        {
+          "name": "AWS_S3_BUCKET_NAME",
+          "value": "aarif24-fragments"
+        },
+        {
+          "name": "AWS_COGNITO_POOL_ID",
+          "value": "us-east-1_1Vy7YBBxU"
+        },
+        {
+          "name": "AWS_COGNITO_CLIENT_ID",
+          "value": "6sjdpeurh0n9r5hmqms7vt4k4j"
+        },
+        {
+          "name": "HTPASSWD_FILE",
+          "value": "/etc/htpasswd/.htpasswd"
+        }
+      ],
+
+      "secrets": [
+        {
+          "name": "HTPASSWD",
+          "valueFrom": "arn:aws:ssm:us-east-1:368798317521:parameter/fragments.htpasswd"
+        }
+      ],
+
+      "mountPoints": [
+        {
+          "sourceVolume": "fragments-volume",
+          "containerPath": "/etc/htpasswd"
+        }
+      ]
+    }
+  ],
+
+  "volumes": [
+    {
+      "name": "fragments-volume"
+    }
+  ]
+}
