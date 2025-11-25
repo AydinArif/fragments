@@ -40,7 +40,7 @@
         },
         {
           "name": "AWS_S3_BUCKET_NAME",
-          "value": "your-bucket-name"
+          "value": "aarif24-fragments"
         }
       ],
       "resourceRequirements": null,
