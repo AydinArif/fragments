@@ -1,24 +1,23 @@
 {
-  "family": "fragments",
+  "family": "fragments-task",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
   "memory": "512",
-
-  "executionRoleArn": "arn:aws:iam::368798317521:role/LabRole",
-  "taskRoleArn": "arn:aws:iam::368798317521:role/LabRole",
+  "executionRoleArn": "arn:aws:iam::905418069913:role/LabRole",
+  "taskRoleArn": "arn:aws:iam::905418069913:role/LabRole",
 
   "containerDefinitions": [
     {
       "name": "fragments",
-      "image": "368798317521.dkr.ecr.us-east-1.amazonaws.com/fragments:latest",
-      
-      "portMappings": [
-        { "containerPort": 8080 }
-      ],
-      
+      "image": "905418069913.dkr.ecr.us-east-1.amazonaws.com/fragments:latest",
       "essential": true,
-
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
       "environment": [
         {
           "name": "NODE_ENV",
@@ -30,7 +29,7 @@
         },
         {
           "name": "AWS_S3_BUCKET_NAME",
-          "value": "aarif24-fragments"
+          "value": "aydin-arif-fragments"
         },
         {
           "name": "AWS_COGNITO_POOL_ID",
@@ -49,14 +48,15 @@
       "secrets": [
         {
           "name": "HTPASSWD",
-          "valueFrom": "arn:aws:ssm:us-east-1:368798317521:parameter/fragments.htpasswd"
+          "valueFrom": "arn:aws:ssm:us-east-1:905418069913:parameter/fragments.htpasswd"
         }
       ],
 
       "mountPoints": [
         {
           "sourceVolume": "fragments-volume",
-          "containerPath": "/etc/htpasswd"
+          "containerPath": "/etc/htpasswd",
+          "readOnly": false
         }
       ]
     }
