@@ -1,16 +1,12 @@
-// src/routes/index.js
 const express = require('express');
 const router = express.Router();
-const fragments = require('./fragments');
-const users = require('./users');
+const fragments = require('./api'); // FIXED
 
-// Super simple health check endpoint — ALB will instantly love this
-// This is the ONE thing that finally kills the "Deprovisioning → Unknown" loop
+// Health check
 router.get('/healthz', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// Root route — you already have this, keep it
 router.get('/', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -20,11 +16,10 @@ router.get('/', (req, res) => {
   });
 });
 
-// Mount your actual API routes
+// Mount actual API routes
 router.use('/fragments', fragments);
-router.use('/users', users);
 
-// 404 handler (keep this last)
+// 404 handler
 router.use((req, res) => {
   res.status(404).json({
     error: {
