@@ -20,39 +20,17 @@
       "portMappings": [
         {
           "containerPort": 80,
-          "hostPort": 80,
           "protocol": "tcp"
         }
       ],
       "environment": [
-        {
-          "name": "NODE_ENV",
-          "value": "production"
-        },
-        {
-          "name": "LOG_LEVEL",
-          "value": "info"
-        },
-        {
-          "name": "PORT",
-          "value": "80"
-        },
-        {
-          "name": "AWS_REGION",
-          "value": "us-east-1"
-        },
-        {
-          "name": "AWS_S3_BUCKET_NAME",
-          "value": "aarif24-fragments"
-        },
-        {
-          "name": "AWS_COGNITO_POOL_ID",
-          "value": "us-east-1_1na2EIvTb"
-        },
-        {
-          "name": "AWS_COGNITO_CLIENT_ID",
-          "value": "7d6r58bms7s16h2fao0enhfkff"
-        }
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "LOG_LEVEL", "value": "info" },
+        { "name": "PORT", "value": "80" },
+        { "name": "AWS_REGION", "value": "us-east-1" },
+        { "name": "AWS_S3_BUCKET_NAME", "value": "aarif24-fragments" },
+        { "name": "AWS_COGNITO_POOL_ID", "value": "us-east-1_1na2EIvTb" },
+        { "name": "AWS_COGNITO_CLIENT_ID", "value": "7d6r58bms7s16h2fao0enhfkff" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
