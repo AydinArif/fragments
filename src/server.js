@@ -1,26 +1,32 @@
 // src/server.js
-// to make sure it runs on port 9000
 require('dotenv').config();
 
-// We want to gracefully shutdown our server
 const stoppable = require('stoppable');
-
-// Get our logger instance
 const logger = require('./logger');
-
-// Get our express app instance
 const app = require('./app');
 
-// Get the desired port from the process' environment. Default to `8080`
-const port = parseInt(process.env.PORT || '8080', 10);
+// CRITICAL FIX: Respect the PORT environment variable set by ECS/Fargate
+// Never default to 8080 if PORT is provided (even if it's "0" or empty string)
+const port = process.env.PORT ? Number(process.env.PORT) : 8080;
 
-// Start a server listening on this port
+if (!port || isNaN(port)) {
+  logger.error({ PORT: process.env.PORT }, 'Invalid or missing PORT environment variable');
+  process.exit(1);
+}
+
 const server = stoppable(
   app.listen(port, () => {
-    // Log a message that the server has started, and which port it's using.
     logger.info(`Server started on port ${port}`);
   })
 );
 
-// Export our server instance so other parts of our code can access it if necessary.
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received: shutting down gracefully');
+  server.stop(() => {
+    logger.info('Server stopped');
+    process.exit(0);
+  });
+});
+
 module.exports = server;
