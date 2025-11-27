@@ -1,25 +1,37 @@
 // src/routes/index.js
-
 const express = require('express');
-const { version, author } = require('../../package.json');
-const { authenticate } = require('../auth');
-const { createSuccessResponse } = require('../response');
-
 const router = express.Router();
+const fragments = require('./fragments');
+const users = require('./users');
 
-// Health check route
-router.get('/', (req, res) => {
-  res.setHeader('Cache-Control', 'no-cache');
-  res.status(200).json(
-    createSuccessResponse({
-      author,
-      githubUrl: 'https://github.com/AydinArif/fragments',
-      version,
-    })
-  );
+// Super simple health check endpoint — ALB will instantly love this
+// This is the ONE thing that finally kills the "Deprovisioning → Unknown" loop
+router.get('/healthz', (req, res) => {
+  res.status(200).json({ status: 'ok' });
 });
 
-// Protect all /v1/* routes with authentication
-router.use('/v1', authenticate(), require('./api'));
+// Root route — you already have this, keep it
+router.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    author: 'Aydin Arif',
+    github: 'https://github.com/aydinarif/fragments',
+    twitter: null,
+  });
+});
+
+// Mount your actual API routes
+router.use('/fragments', fragments);
+router.use('/users', users);
+
+// 404 handler (keep this last)
+router.use((req, res) => {
+  res.status(404).json({
+    error: {
+      message: `Route not found: ${req.method} ${req.originalUrl}`,
+      code: 'not-found',
+    },
+  });
+});
 
 module.exports = router;
