@@ -4,6 +4,7 @@ const express = require('express');
 const { version, author } = require('../../package.json');
 const { authenticate } = require('../auth');
 const { createSuccessResponse } = require('../response');
+const { hostname } = require('os');
 
 const router = express.Router();
 
@@ -15,11 +16,11 @@ router.get('/', (req, res) => {
       author,
       githubUrl: 'https://github.com/AydinArif/fragments',
       version,
+      hostname: hostname(),   // <-- REQUIRED FOR WALKTHROUGH
     })
   );
 });
 
-// Protect all /v1/* routes with authentication
 router.use('/v1', authenticate(), require('./api'));
 
 module.exports = router;
