@@ -52,7 +52,6 @@ class Fragment {
     return this.mimeType.startsWith('text/') || this.mimeType === 'application/json';
   }
 
-  // ✅ Fixed formats() method
   get formats() {
     const baseType = this.mimeType;
 
