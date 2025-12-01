@@ -40,8 +40,8 @@ WORKDIR /app
 COPY --from=builder /app /app
 
 # Add non-root user for better security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
+# RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# USER appuser
 
 # Expose port
 EXPOSE 8080
