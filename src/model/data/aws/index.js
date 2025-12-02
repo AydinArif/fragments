@@ -5,16 +5,32 @@ const s3Client = require('./s3Client');
 const { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const logger = require('../../../logger');
 
-function writeFragment(ownerId, id, fragment) {
+/**
+ * Write a fragment's metadata to the in-process metadata store.
+ * Accepts either (ownerId, fragment) or (fragment) where fragment.ownerId exists.
+ */
+function writeFragment(arg1, arg2) {
+  let ownerId, fragment;
+
+  if (typeof arg1 === 'string') {
+    ownerId = arg1;
+    fragment = arg2;
+  } else {
+    fragment = arg1;
+    ownerId = fragment?.ownerId;
+  }
+
+  if (!ownerId || !fragment || !fragment.id) {
+    throw new Error('ownerId and fragment.id are required');
+  }
+
   const serialized = JSON.stringify(fragment);
-  return metadata.put(ownerId, id, serialized);
+  return metadata.put(ownerId, fragment.id, serialized);
 }
 
 async function readFragment(ownerId, id) {
   const serialized = await metadata.get(ownerId, id);
-  if (serialized === undefined) {
-    return null;
-  }
+  if (serialized === undefined) return undefined;
   return typeof serialized === 'string' ? JSON.parse(serialized) : serialized;
 }
 
@@ -65,18 +81,20 @@ async function readFragmentData(ownerId, id) {
 
 async function listFragments(ownerId, expand = false) {
   const fragments = await metadata.query(ownerId);
+  if (!fragments) return [];
 
-  if (!fragments) {
-    return [];
-  }
-
-  const parsedFragments = fragments.map((fragment) => JSON.parse(fragment));
+  // ensure deterministic order by ID
+  const parsed = fragments.map((f) =>
+    typeof f === 'string' ? JSON.parse(f) : f
+  );
+  parsed.sort((a, b) => a.id.localeCompare(b.id));
 
   if (expand) {
-    return parsedFragments;
+    // return serialized JSON strings to match memory backend contract
+    return parsed.map((f) => JSON.stringify(f));
   }
 
-  return parsedFragments;
+  return parsed.map((f) => f.id);
 }
 
 async function deleteFragment(ownerId, id) {
