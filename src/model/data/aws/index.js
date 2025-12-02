@@ -1,28 +1,38 @@
-// Use S3 for fragment data (DynamoDB usage removed for now)
+const MemoryDB = require('../memory/memory-db');
+
+const metadata = new MemoryDB();
 const s3Client = require('./s3Client');
 const { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const logger = require('../../../logger');
 
-// Metadata persistence (DynamoDB) is disabled for now. Keep a stub
-// so callers (e.g., Fragment.save()) still work without throwing.
-async function writeFragment(fragment) {
-  logger.warn({ fragment }, 'DynamoDB disabled: skipping writeFragment metadata persistence');
-  return;
+function writeFragment(ownerId, id, fragment) {
+  const serialized = JSON.stringify(fragment);
+  return metadata.put(ownerId, id, serialized);
 }
 
-// Metadata reads are disabled for now; return undefined.
 async function readFragment(ownerId, id) {
-  logger.warn({ ownerId, id }, 'DynamoDB disabled: readFragment returning undefined');
-  return undefined;
+  const serialized = await metadata.get(ownerId, id);
+  if (serialized === undefined) {
+    return null;
+  }
+  return typeof serialized === 'string' ? JSON.parse(serialized) : serialized;
 }
 
-// Writes a fragment's data to an S3 Object in a Bucket
+const streamToBuffer = (stream) =>
+  new Promise((resolve, reject) => {
+    const chunks = [];
+    stream.on('data', (chunk) => chunks.push(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+  });
+
 async function writeFragmentData(ownerId, id, data) {
   const params = {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
     Key: `${ownerId}/${id}`,
     Body: data,
   };
+
   const command = new PutObjectCommand(params);
   try {
     await s3Client.send(command);
@@ -33,61 +43,71 @@ async function writeFragmentData(ownerId, id, data) {
   }
 }
 
-// Convert a stream into a Buffer
-const streamToBuffer = (stream) =>
-  new Promise((resolve, reject) => {
-    const chunks = [];
-    stream.on('data', (chunk) => chunks.push(chunk));
-    stream.on('error', reject);
-    stream.on('end', () => resolve(Buffer.concat(chunks)));
-  });
-
-// Read a fragment's data from S3. Returns a Promise<Buffer>
 async function readFragmentData(ownerId, id) {
   const params = {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
     Key: `${ownerId}/${id}`,
   };
+
   const command = new GetObjectCommand(params);
   try {
-    const response = await s3Client.send(command);
-    return streamToBuffer(response.Body);
+    const data = await s3Client.send(command);
+    return streamToBuffer(data.Body);
   } catch (err) {
     const { Bucket, Key } = params;
+    if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
+      return null;
+    }
     logger.error({ err, Bucket, Key }, 'Error streaming fragment data from S3');
     throw new Error('unable to read fragment data');
   }
 }
 
-// Listing fragments (via DynamoDB) is disabled for now. Return empty list.
-async function listFragments(ownerId, expand) {
-  if (typeof expand === 'undefined') expand = false;
-  logger.warn({ ownerId }, 'DynamoDB disabled: listFragments returning empty list');
-  return [];
+async function listFragments(ownerId, expand = false) {
+  const fragments = await metadata.query(ownerId);
+
+  if (!fragments) {
+    return [];
+  }
+
+  const parsedFragments = fragments.map(fragment => JSON.parse(fragment));
+
+  if (expand) {
+    return parsedFragments;
+  }
+
+  return parsedFragments;
 }
 
-// Delete fragment metadata and S3 object
 async function deleteFragment(ownerId, id) {
-  // 1. Delete from S3 first
-  const s3Params = {
-    Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Key: `${ownerId}/${id}`,
-  };
-  const s3Command = new DeleteObjectCommand(s3Params);
-
   try {
-    await s3Client.send(s3Command);
+    const fragment = await readFragment(ownerId, id);
+    if (!fragment) {
+      return false;
+    }
+
+    const params = {
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Key: `${ownerId}/${id}`,
+    };
+
+    const command = new DeleteObjectCommand(params);
+
+    await Promise.all([
+      metadata.del(ownerId, id),
+      s3Client.send(command),
+    ]);
+    
+    return true;
   } catch (err) {
-    logger.error({ err, ...s3Params }, 'Error deleting fragment data from S3');
-    throw new Error('unable to delete fragment data');
+    logger.error({ err, ownerId, id }, 'Error deleting fragment from S3');
+    return false;
   }
 }
 
-module.exports = {
-  listFragments,
-  writeFragment,
-  readFragment,
-  writeFragmentData,
-  readFragmentData,
-  deleteFragment,
-};
+module.exports.listFragments = listFragments;
+module.exports.writeFragment = writeFragment;
+module.exports.readFragment = readFragment;
+module.exports.writeFragmentData = writeFragmentData;
+module.exports.readFragmentData = readFragmentData;
+module.exports.deleteFragment = deleteFragment;
