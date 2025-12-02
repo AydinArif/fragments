@@ -8,7 +8,7 @@ const {
   readFragmentData,
   listFragments,
   deleteFragment,
-} = require('./data/memory');
+} = require('./data');
 const { v4: uuidv4 } = require('uuid');
 
 class Fragment {
