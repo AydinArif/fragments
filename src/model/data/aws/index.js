@@ -1,4 +1,4 @@
-const MemoryDB = require('../memory/memory-db');
+const { MemoryDB } = require('../memory/memory-db');
 
 const metadata = new MemoryDB();
 const s3Client = require('./s3Client');
@@ -70,7 +70,7 @@ async function listFragments(ownerId, expand = false) {
     return [];
   }
 
-  const parsedFragments = fragments.map(fragment => JSON.parse(fragment));
+  const parsedFragments = fragments.map((fragment) => JSON.parse(fragment));
 
   if (expand) {
     return parsedFragments;
@@ -93,11 +93,8 @@ async function deleteFragment(ownerId, id) {
 
     const command = new DeleteObjectCommand(params);
 
-    await Promise.all([
-      metadata.del(ownerId, id),
-      s3Client.send(command),
-    ]);
-    
+    await Promise.all([metadata.del(ownerId, id), s3Client.send(command)]);
+
     return true;
   } catch (err) {
     logger.error({ err, ownerId, id }, 'Error deleting fragment from S3');
