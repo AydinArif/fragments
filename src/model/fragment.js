@@ -55,36 +55,47 @@ class Fragment {
   get formats() {
     const baseType = this.mimeType;
 
-    // For plain text only
     if (baseType === 'text/plain' || this.type === 'text/plain; charset=utf-8') {
       return ['text/plain'];
     }
 
-    // For JSON fragments
     if (baseType === 'application/json') {
       return ['application/json', 'text/plain'];
     }
 
-    // For other text-based formats (markdown, html, etc.)
     if (this.isText) {
       return ['text/markdown', 'text/html', 'application/json'];
     }
 
-    // For all other non-text formats
     return [this.type];
   }
 
+  // Save metadata to DynamoDB (hashed ownerId)
   async save() {
     const ownerHash = hash(this.ownerId);
     this.updated = new Date().toISOString();
     logger.debug({ ownerId: this.ownerId, ownerHash, id: this.id }, 'Saving fragment');
-    await writeFragment(ownerHash, this);
+
+    const fragmentToStore = {
+      id: this.id,
+      ownerId: ownerHash,
+      type: this.type,
+      size: this.size,
+      created: this.created,
+      updated: this.updated,
+    };
+
+    await writeFragment(fragmentToStore);
   }
 
+  // Write data to S3 using hashed ownerId
   async setData(data) {
     if (!Buffer.isBuffer(data)) throw new Error('Data must be a Buffer');
+
     const ownerHash = hash(this.ownerId);
+
     await writeFragmentData(ownerHash, this.id, data);
+
     this.size = data.length;
     this.updated = new Date().toISOString();
     await this.save();
@@ -110,22 +121,25 @@ class Fragment {
   static async byUser(ownerId, expand = false) {
     const ownerHash = hash(ownerId);
     const list = await listFragments(ownerHash, expand);
-    if (expand) return list.map((json) => new Fragment(JSON.parse(json)));
+
+    if (expand) {
+      return list.map((json) => new Fragment(JSON.parse(json)));
+    }
+
     return list;
   }
 
   static async byId(ownerId, id) {
-    const isHashed = /^[a-f0-9]{64}$/.test(ownerId);
-    const ownerKey = isHashed ? ownerId : hash(ownerId);
-    logger.debug({ ownerId, ownerKey, isHashed, id }, 'Looking up fragment byId()');
+    const ownerHash = hash(ownerId);
+    logger.debug({ ownerId, ownerKey: ownerHash, id }, 'Looking up fragment byId()');
 
-    const data = await readFragment(ownerKey, id);
+    const data = await readFragment(ownerHash, id);
+
     if (!data) {
-      logger.warn({ ownerId, ownerKey, id }, 'Fragment not found for owner');
+      logger.warn({ ownerId, ownerKey: ownerHash, id }, 'Fragment not found for owner');
       throw new Error('Fragment not found');
     }
 
-    logger.debug({ id, ownerKey }, 'Fragment found');
     return new Fragment(data);
   }
 }
