@@ -15,10 +15,8 @@ class Fragment {
   constructor({ id, ownerId, type, size = 0, created, updated }) {
     if (!ownerId) throw new Error('ownerId is required');
     if (!type) throw new Error('type is required');
-    if (typeof size !== 'number' || size < 0)
-      throw new Error('size must be a non-negative number');
-    if (!Fragment.isSupportedType(type))
-      throw new Error(`unsupported type: ${type}`);
+    if (typeof size !== 'number' || size < 0) throw new Error('size must be a non-negative number');
+    if (!Fragment.isSupportedType(type)) throw new Error(`unsupported type: ${type}`);
 
     this.id = id || uuidv4();
     this.ownerId = ownerId;
@@ -39,9 +37,7 @@ class Fragment {
 
   static isSupportedType(type) {
     const baseType = type.toLowerCase().split(';')[0].trim();
-    return this.SUPPORTED_TYPES.some((supported) =>
-      baseType.startsWith(supported.split(';')[0])
-    );
+    return this.SUPPORTED_TYPES.some((supported) => baseType.startsWith(supported.split(';')[0]));
   }
 
   get mimeType() {
@@ -123,7 +119,10 @@ class Fragment {
     const list = await listFragments(ownerHash, expand);
 
     if (expand) {
-      return list.map((json) => new Fragment(JSON.parse(json)));
+      return list.map((item) => {
+        const fragmentData = typeof item === 'string' ? JSON.parse(item) : item;
+        return new Fragment({ ...fragmentData, ownerId });
+      });
     }
 
     return list;
@@ -140,7 +139,7 @@ class Fragment {
       throw new Error('Fragment not found');
     }
 
-    return new Fragment(data);
+    return new Fragment({ ...data, ownerId });
   }
 }
 

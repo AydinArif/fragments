@@ -23,7 +23,7 @@ async function writeFragment(fragment) {
 
   const params = {
     TableName: tableName,
-    Item: fragment,  // IMPORTANT: store full fragment object
+    Item: fragment, // IMPORTANT: store full fragment object
   };
 
   const command = new PutCommand(params);
@@ -74,7 +74,10 @@ async function writeFragmentData(ownerId, id, data) {
   try {
     await s3Client.send(command);
   } catch (err) {
-    logger.error({ err, Bucket: params.Bucket, Key: params.Key }, 'Error uploading fragment data to S3');
+    logger.error(
+      { err, Bucket: params.Bucket, Key: params.Key },
+      'Error uploading fragment data to S3'
+    );
     throw new Error('unable to upload fragment data');
   }
 }
@@ -105,7 +108,17 @@ async function readFragmentData(ownerId, id) {
     const response = await s3Client.send(command);
     return streamToBuffer(response.Body);
   } catch (err) {
-    logger.error({ err, Bucket: params.Bucket, Key: params.Key }, 'Error streaming fragment data from S3');
+    // If the object doesn't exist in S3, treat it as "no data" so
+    // callers can respond with a 404 instead of a 500.
+    if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
+      logger.warn({ Bucket: params.Bucket, Key: params.Key }, 'Fragment data not found in S3');
+      return undefined;
+    }
+
+    logger.error(
+      { err, Bucket: params.Bucket, Key: params.Key },
+      'Error streaming fragment data from S3'
+    );
     throw new Error('unable to read fragment data');
   }
 }
