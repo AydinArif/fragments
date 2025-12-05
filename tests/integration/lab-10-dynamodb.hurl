@@ -70,7 +70,7 @@ jsonpath "$.fragment.updated" isString
 jsonpath "$.fragment.ownerId" isString
 
 # 5. GET all fragments (without expansion, just IDs) for the user
-GET http://localhost:8080/v1/fragments
+GET http://localhost:8080/v1/fragments?expand=0
 [BasicAuth]
 user1@email.com:password1
 
@@ -101,7 +101,7 @@ jsonpath "$.status" == "error"
 jsonpath "$.error.code" == 404
 
 # 8. GET all fragments again (first should not be in the list)
-GET http://localhost:8080/v1/fragments
+GET http://localhost:8080/v1/fragments?expand=0
 [BasicAuth]
 user1@email.com:password1
 
