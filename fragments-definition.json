@@ -43,6 +43,10 @@
         {
           "name": "PORT",
           "value": "80"
+        },
+        {
+          "name": "AWS_DYNAMODB_TABLE_NAME",
+          "value": "fragments"
         }
       ],
       "logConfiguration": {
