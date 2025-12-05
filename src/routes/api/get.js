@@ -12,7 +12,7 @@ const logger = require('../../logger');
 module.exports = async (req, res) => {
   try {
     const ownerId = req.user;
-    const expand = req.query.expand === '1';
+    const expand = req.query.expand !== '0';
 
     logger.debug({ ownerId, expand }, 'Fetching fragments for user');
 
