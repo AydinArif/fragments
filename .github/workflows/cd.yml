@@ -66,6 +66,7 @@ jobs:
             PORT=80
             AWS_COGNITO_POOL_ID=us-east-1_1na2EIvTb
             AWS_COGNITO_CLIENT_ID=7d6r58bms7s16h2fao0enhfkff
+            AWS_DYNAMODB_TABLE_NAME=fragments
 
       # Deploy the updated task definition to ECS
       - name: Deploy to Amazon ECS

@@ -21,7 +21,7 @@ services:
       - AWS_DYNAMODB_ENDPOINT_URL=http://dynamodb-local:8000
 
       # Resource names
-      - AWS_S3_BUCKET_NAME=fragments
+      - AWS_S3_BUCKET_NAME=aarif24-fragments
       - AWS_DYNAMODB_TABLE_NAME=fragments
 
     ports:
