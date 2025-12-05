@@ -27,10 +27,15 @@ jwtVerifier
 // Passport Bearer strategy
 module.exports.strategy = () =>
   new BearerStrategy(async (token, done) => {
+    // If the token is missing or explicitly "undefined" (string), reject
+    if (!token || token === 'undefined') {
+      return done(null, false);
+    }
+
     try {
       const user = await jwtVerifier.verify(token);
       logger.debug({ user }, 'verified user token');
-      
+
       done(null, user.sub);
     } catch (err) {
       logger.error({ err, token }, 'could not verify token');
@@ -40,4 +45,3 @@ module.exports.strategy = () =>
 
 // Middleware
 module.exports.authenticate = () => authorize('bearer');
-
