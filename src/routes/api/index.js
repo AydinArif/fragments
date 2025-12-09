@@ -8,6 +8,8 @@ router.get('/fragments/:id', require('./get-id'));
 
 router.post('/fragments', require('./post'));
 router.put('/fragments/:id', require('./put'));
+router.get('/fragments/:id/data', require('./data'));
+router.post('/fragments/:id/convert', require('./convert'));
 
 // Added this
 router.delete('/fragments/:id', require('./delete'));
