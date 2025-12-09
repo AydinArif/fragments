@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Fragments - Convert (Read-only) Example</title>
+    <style>
+      body {
+        font-family: system-ui, Arial;
+        padding: 20px;
+        background: #111;
+        color: #eee;
+      }
+      .card {
+        background: #1e1e1e;
+        padding: 16px;
+        border-radius: 8px;
+        max-width: 900px;
+      }
+      label,
+      button {
+        display: block;
+        margin-bottom: 8px;
+      }
+      textarea {
+        width: 100%;
+        height: 160px;
+        font-family: monospace;
+      }
+      select {
+        width: 100%;
+        padding: 6px;
+      }
+      img.preview {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Fragments — Convert (Read-only) Demo</h1>
+    <div class="card">
+      <label
+        >API Base URL
+        <input
+          id="apiBase"
+          placeholder="http://localhost:8080"
+          value="http://localhost:8080"
+          style="width: 100%"
+        />
+      </label>
+
+      <label
+        >Credentials (Basic Auth)
+        <input id="auth" placeholder="user:password" style="width: 100%" />
+      </label>
+
+      <label
+        >Fragment ID
+        <input id="fragId" placeholder="fragment id" style="width: 100%" />
+      </label>
+
+      <div style="display: flex; gap: 8px; align-items: center">
+        <button id="formatsBtn">Show Formats</button>
+        <select id="formatsSelect"></select>
+        <button id="convertBtn">Convert (Read-only)</button>
+      </div>
+
+      <p style="margin-top: 12px">Converted output (console & preview):</p>
+      <textarea id="output" readonly></textarea>
+      <img id="imgPreview" class="preview" style="display: none" />
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+
+      function parseCreds() {
+        const v = $('auth').value || '';
+        const [user, pass] = v.split(':');
+        return { user: user || '', pass: pass || '' };
+      }
+
+      async function apiJson(apiBase, path, opts = {}) {
+        const creds = parseCreds();
+        const headers = Object.assign({}, opts.headers || {}, {
+          Authorization: 'Basic ' + btoa(`${creds.user || ''}:${creds.pass || ''}`),
+        });
+        const res = await fetch(apiBase + path, Object.assign({}, opts, { headers }));
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        return res.json();
+      }
+
+      $('formatsBtn').addEventListener('click', async () => {
+        const apiBase = $('apiBase').value;
+        const id = $('fragId').value;
+        $('output').value = '';
+        $('imgPreview').style.display = 'none';
+        if (!id) return alert('enter fragment id');
+        try {
+          const payload = await apiJson(apiBase, `/v1/fragments/${id}/formats`);
+          const formats = payload.formats || [];
+          const sel = $('formatsSelect');
+          sel.innerHTML = '';
+          formats.forEach((f) => sel.appendChild(new Option(f, f)));
+          if (formats.length === 0) sel.appendChild(new Option('no formats', ''));
+        } catch (err) {
+          alert('Formats error: ' + err.message);
+        }
+      });
+
+      $('convertBtn').addEventListener('click', async () => {
+        const apiBase = $('apiBase').value;
+        const id = $('fragId').value;
+        const target = $('formatsSelect').value;
+        $('output').value = '';
+        $('imgPreview').style.display = 'none';
+        if (!id) return alert('enter fragment id');
+        if (!target) return alert('choose a format');
+        try {
+          const creds = parseCreds();
+          const res = await fetch(`${apiBase}/v1/fragments/${id}/convert`, {
+            method: 'POST',
+            headers: {
+              Authorization: 'Basic ' + btoa(`${creds.user || ''}:${creds.pass || ''}`),
+              'Content-Type': 'application/json',
+              Accept: '*/*',
+            },
+            body: JSON.stringify({ target }),
+          });
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          const ct = res.headers.get('Content-Type') || '';
+          if (ct.startsWith('text/') || ct.includes('json')) {
+            const text = await res.text();
+            $('output').value = text;
+            // open preview for HTML
+            if (ct === 'text/html') {
+              const w = window.open('', '_blank');
+              w.document.open();
+              w.document.write(text);
+              w.document.close();
+            }
+          } else {
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            $('imgPreview').src = url;
+            $('imgPreview').style.display = 'block';
+            console.log('Image converted, preview shown');
+          }
+        } catch (err) {
+          alert('Convert failed: ' + err.message);
+        }
+      });
+    </script>
+  </body>
+</html>
