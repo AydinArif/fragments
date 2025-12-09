@@ -1,7 +1,7 @@
 {
   "name": "fragments",
   "private": true,
-  "version": "9.9.28",
+  "version": "9.9.29",
   "description": "Fragments back-end API",
   "scripts": {
     "test:watch": "jest -c jest.config.js --runInBand --watch --",
@@ -51,4 +51,3 @@
     "stoppable": "^1.1.0"
   }
 }
-
