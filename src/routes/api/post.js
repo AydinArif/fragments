@@ -13,7 +13,7 @@ const rawBody = () =>
     type: (req) => {
       try {
         const { type } = contentType.parse(req);
-        return type.startsWith('text/') || type === 'application/json';
+        return type.startsWith('text/') || type === 'application/json' || type.startsWith('image/');
       } catch {
         return false;
       }
@@ -28,12 +28,17 @@ module.exports = [
       const { type } = contentType.parse(req);
       const ownerId = req.user;
 
-      // Check supported types
-      if (!type.startsWith('text/') && type !== 'application/json') {
+      // Check supported types (allow images too)
+      if (!type.startsWith('text/') && type !== 'application/json' && !type.startsWith('image/')) {
         logger.warn(`Unsupported Content-Type received: ${type}`);
         return res
           .status(415)
-          .json(createErrorResponse(415, 'Unsupported Media Type: only text/* or application/json allowed'));
+          .json(
+            createErrorResponse(
+              415,
+              'Unsupported Media Type: only text/* or application/json allowed'
+            )
+          );
       }
 
       // Empty body check
@@ -50,9 +55,7 @@ module.exports = [
       if (type === 'application/json') {
         try {
           // Convert Buffer → string → validate → store as Buffer
-          const jsonString = Buffer.isBuffer(req.body)
-            ? req.body.toString('utf8')
-            : req.body;
+          const jsonString = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
 
           JSON.parse(jsonString); // validation only
           dataToStore = Buffer.from(jsonString, 'utf8');
@@ -60,11 +63,12 @@ module.exports = [
           logger.error({ err }, 'Invalid JSON format');
           return res.status(400).json(createErrorResponse(400, 'Invalid JSON body'));
         }
+      } else if (type.startsWith('image/')) {
+        // Image types: store raw bytes
+        dataToStore = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body);
       } else {
         // Text/plain or text/* types
-        dataToStore = Buffer.isBuffer(req.body)
-          ? req.body
-          : Buffer.from(req.body, 'utf8');
+        dataToStore = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body, 'utf8');
       }
 
       await fragment.setData(dataToStore);
@@ -75,10 +79,7 @@ module.exports = [
 
       logger.info(`Fragment created successfully (type: ${type})`);
 
-      return res
-        .status(201)
-        .set('Location', location)
-        .json(createSuccessResponse({ fragment }));
+      return res.status(201).set('Location', location).json(createSuccessResponse({ fragment }));
     } catch (err) {
       logger.error({ err }, 'Server error while creating fragment');
       return res.status(500).json(createErrorResponse(500, err.message || 'Internal Server Error'));

@@ -1,44 +1,48 @@
+version: '3.8'
+
 services:
   # Fragments microservice API server
   fragments:
-    init: true
     build: .
+    depends_on:
+      - dynamodb-local
+      - localstack
     environment:
-      - API_URL=http://localhost:8080
-      - HTPASSWD_FILE=tests/.htpasswd
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      API_URL: "http://localhost:8080"
+      HTPASSWD_FILE: "tests/.htpasswd"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
 
       # --- REQUIRED AWS CREDS FOR LOCALSTACK ---
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - AWS_SESSION_TOKEN=test
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
+      AWS_SESSION_TOKEN: "test"
 
       # AWS_REGION must be empty for local integration tests
-      - AWS_REGION=
+      AWS_REGION: ""
 
       # LocalStack + DynamoDB Local endpoints
-      - AWS_S3_ENDPOINT_URL=http://localstack:4566
-      - AWS_DYNAMODB_ENDPOINT_URL=http://dynamodb-local:8000
+      AWS_S3_ENDPOINT_URL: "http://localstack:4566"
+      AWS_DYNAMODB_ENDPOINT_URL: "http://dynamodb-local:8000"
 
       # Resource names (these are fine locally)
-      - AWS_S3_BUCKET_NAME=aarif24-fragments
-      - AWS_DYNAMODB_TABLE_NAME=fragments
+      AWS_S3_BUCKET_NAME: "aarif24-fragments"
+      AWS_DYNAMODB_TABLE_NAME: "fragments"
 
     ports:
       - "8080:8080"
 
   # DynamoDB Local
   dynamodb-local:
-    image: amazon/dynamodb-local
+    image: amazon/dynamodb-local:latest
     ports:
       - "8000:8000"
-    command: ["-jar", "DynamoDBLocal.jar", "-inMemory"]
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
 
   # LocalStack (S3 mock)
   localstack:
-    image: localstack/localstack
+    image: localstack/localstack:latest
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=s3
-      - DEFAULT_REGION=us-east-1
+      SERVICES: "s3"
+      DEFAULT_REGION: "us-east-1"

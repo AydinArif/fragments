@@ -33,6 +33,11 @@ class Fragment {
     'text/html',
     'text/csv',
     'application/json',
+    // Basic image types
+    'image/png',
+    'image/jpeg',
+    'image/jpg',
+    'image/webp',
   ];
 
   static isSupportedType(type) {
@@ -61,6 +66,11 @@ class Fragment {
 
     if (this.isText) {
       return ['text/markdown', 'text/html', 'application/json'];
+    }
+
+    // Image formats: allow conversion between common formats
+    if (baseType.startsWith('image/')) {
+      return ['image/png', 'image/jpeg', 'image/webp'];
     }
 
     return [this.type];

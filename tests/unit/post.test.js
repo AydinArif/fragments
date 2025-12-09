@@ -38,12 +38,26 @@ describe('POST /v1/fragments', () => {
     expect(res.headers.location).toMatch(/\/v1\/fragments\//);
   });
 
+  test('authenticated user can create an image/png fragment', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]); // minimal PNG magic
+    const res = await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'image/png')
+      .send(png);
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.status).toBe('ok');
+    expect(res.body.fragment.type).toBe('image/png');
+    expect(res.headers.location).toMatch(/\/v1\/fragments\//);
+  });
+
   test('rejects truly unsupported content types', async () => {
     await request(app)
       .post('/v1/fragments')
       .auth('user1@email.com', 'password1')
-      .set('Content-Type', 'image/png')
-      .send('fakepngdata')
+      .set('Content-Type', 'application/octet-stream')
+      .send('somebinarydata')
       .expect(415);
   });
 });

@@ -1,5 +1,13 @@
 // tests/unit/get-id-ext.test.js
 
+// Mock sharp before importing modules that require it
+jest.mock('sharp', () =>
+  jest.fn(() => ({
+    toFormat: jest.fn().mockReturnThis(),
+    toBuffer: jest.fn().mockResolvedValue(Buffer.from('converted-image')),
+  }))
+);
+
 const request = require('supertest');
 const express = require('express');
 const router = require('../../src/routes/api');
@@ -8,6 +16,7 @@ const Fragment = require('../../src/model/fragment');
 jest.mock('../../src/model/fragment');
 jest.mock('../../src/logger', () => ({
   error: jest.fn(),
+  debug: jest.fn(),
 }));
 
 const app = express();
@@ -81,5 +90,22 @@ describe('GET /v1/fragments/:id.ext', () => {
 
     expect(res.statusCode).toBe(500);
     expect(res.body.status).toBe('error');
+  });
+
+  test('converts image to requested ext using sharp', async () => {
+    const fakeFragment = {
+      type: 'image/png',
+      mimeType: 'image/png',
+      getData: jest.fn().mockResolvedValue(Buffer.from('pngdata')),
+    };
+    Fragment.byId.mockResolvedValue(fakeFragment);
+
+    const res = await request(app).get('/v1/fragments/123.jpg');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.type).toMatch(/image\//);
+    expect(res.body).toBeInstanceOf(Buffer);
+    // Ensure our mocked sharp returned the converted image bytes
+    expect(res.body.toString()).toBe('converted-image');
   });
 });

@@ -7,6 +7,7 @@ router.get('/fragments/:id.:ext', require('./get-id-ext'));
 router.get('/fragments/:id', require('./get-id'));
 
 router.post('/fragments', require('./post'));
+router.put('/fragments/:id', require('./put'));
 
 // Added this
 router.delete('/fragments/:id', require('./delete'));
