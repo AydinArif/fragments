@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
           try {
             const parsed = JSON.parse(data.toString());
             data = JSON.stringify(parsed, null, 2);
-          } catch (e) {
+          } catch {
             data = data.toString('utf8');
           }
         } else {
