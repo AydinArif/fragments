@@ -25,12 +25,28 @@ module.exports = async (req, res) => {
     // Convert markdown to HTML if requested
     if (
       contentType.startsWith('text/markdown') &&
-      (req.url.endsWith('.html') ||
-        req.headers.accept?.includes('text/html'))
+      (req.url.endsWith('.html') || req.headers.accept?.includes('text/html'))
     ) {
       logger.info('Converting Markdown to HTML');
       data = md.render(data.toString());
       responseType = 'text/html';
+    }
+
+    // For text or JSON responses, send strings so browsers can render them
+    if (responseType.startsWith('text/') || responseType === 'application/json') {
+      if (Buffer.isBuffer(data)) {
+        // For JSON, pretty-print for easier viewing
+        if (responseType === 'application/json') {
+          try {
+            const parsed = JSON.parse(data.toString());
+            data = JSON.stringify(parsed, null, 2);
+          } catch (e) {
+            data = data.toString('utf8');
+          }
+        } else {
+          data = data.toString('utf8');
+        }
+      }
     }
 
     res.set('Content-Type', responseType);

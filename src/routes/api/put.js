@@ -43,6 +43,9 @@ module.exports = [
       // Load the fragment (will throw if not found or not owned)
       const fragment = await Fragment.byId(ownerId, id);
 
+      // Update the fragment's type to reflect the new content-type
+      fragment.type = type;
+
       let dataToStore;
       if (type === 'application/json') {
         try {
