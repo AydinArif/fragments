@@ -8,9 +8,9 @@ const md = new MarkdownIt();
 let sharp;
 try {
   sharp = require('sharp');
-} catch (e) {
+} catch (err) {
   // sharp may not be installed in some environments; conversions will fail later with 415
-  logger && logger.debug && logger.debug('sharp not available, image conversions disabled');
+  logger.debug({ err }, 'sharp not available, image conversions disabled');
 }
 
 module.exports = async (req, res) => {
