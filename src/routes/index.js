@@ -16,11 +16,14 @@ router.get('/', (req, res) => {
       author,
       githubUrl: 'https://github.com/AydinArif/fragments',
       version,
-      hostname: hostname(),   // <-- REQUIRED FOR WALKTHROUGH
+      hostname: hostname(), // <-- REQUIRED FOR WALKTHROUGH
     })
   );
 });
 
-router.use('/v1', authenticate(), require('./api'));
+// Parse incoming request bodies as raw bytes for the API routes so
+// handlers can access the raw Buffer at `req.body` (required by tests).
+// Then apply authentication and mount the API router.
+router.use('/v1', express.raw({ type: '*/*', limit: '10mb' }), authenticate(), require('./api'));
 
 module.exports = router;

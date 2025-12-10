@@ -1,88 +1,83 @@
-// src/routes/api/post.js
-const express = require('express');
-const contentType = require('content-type');
-const { createSuccessResponse, createErrorResponse } = require('../../response');
-const Fragment = require('../../model/fragment');
+const { Fragment } = require('../../model/fragment');
 const logger = require('../../logger');
 
-// Middleware to handle both text/* and JSON
-const rawBody = () =>
-  express.raw({
-    inflate: true,
-    limit: '10mb',
-    type: (req) => {
-      try {
-        const { type } = contentType.parse(req);
-        return type.startsWith('text/') || type === 'application/json' || type.startsWith('image/');
-      } catch {
-        return false;
-      }
-    },
-  });
-
-// POST /v1/fragments
-module.exports = [
-  rawBody(),
-  async (req, res) => {
-    try {
-      const { type } = contentType.parse(req);
-      const ownerId = req.user;
-
-      // Check supported types (allow images too)
-      if (!type.startsWith('text/') && type !== 'application/json' && !type.startsWith('image/')) {
-        logger.warn(`Unsupported Content-Type received: ${type}`);
-        return res
-          .status(415)
-          .json(
-            createErrorResponse(
-              415,
-              'Unsupported Media Type: only text/* or application/json allowed'
-            )
-          );
-      }
-
-      // Empty body check
-      if (!req.body || req.body.length === 0) {
-        logger.warn('Empty request body received');
-        return res.status(400).json(createErrorResponse(400, 'Empty request body'));
-      }
-
-      // Create fragment
-      const fragment = new Fragment({ ownerId, type });
-
-      let dataToStore;
-
-      if (type === 'application/json') {
-        try {
-          // Convert Buffer → string → validate → store as Buffer
-          const jsonString = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
-
-          JSON.parse(jsonString); // validation only
-          dataToStore = Buffer.from(jsonString, 'utf8');
-        } catch (err) {
-          logger.error({ err }, 'Invalid JSON format');
-          return res.status(400).json(createErrorResponse(400, 'Invalid JSON body'));
-        }
-      } else if (type.startsWith('image/')) {
-        // Image types: store raw bytes
-        dataToStore = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body);
-      } else {
-        // Text/plain or text/* types
-        dataToStore = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body, 'utf8');
-      }
-
-      await fragment.setData(dataToStore);
-      await fragment.save();
-
-      const apiUrl = process.env.API_URL || `http://${req.headers.host}`;
-      const location = `${apiUrl}/v1/fragments/${fragment.id}`;
-
-      logger.info(`Fragment created successfully (type: ${type})`);
-
-      return res.status(201).set('Location', location).json(createSuccessResponse({ fragment }));
-    } catch (err) {
-      logger.error({ err }, 'Server error while creating fragment');
-      return res.status(500).json(createErrorResponse(500, err.message || 'Internal Server Error'));
+module.exports = async (req, res) => {
+  try {
+    const contentType = req.get('Content-Type');
+    if (!contentType) {
+      logger.error('Content-Type header is missing');
+      return res.status(400).json({
+        status: 'error',
+        error: { code: 400, message: 'Content-Type header is required' }
+      });
     }
-  },
-];
+
+    // Check if Fragment supports this type
+    if (!Fragment.isSupportedType(contentType)) {
+      logger.error(`Unsupported Content-Type: ${contentType}`);
+      return res.status(415).json({
+        status: 'error',
+        error: { code: 415, message: `Unsupported Content-Type: ${contentType}` }
+      });
+    }
+    // Check if we got a valid Buffer from the raw body parser
+    if (!Buffer.isBuffer(req.body)) {
+      logger.error('Request body is not a Buffer');
+      return res.status(415).json({
+        status: 'error',
+        error: { code: 415, message: 'Unsupported Media Type' }
+      });
+    }
+
+    // Create new fragment
+    const fragment = new Fragment({
+      ownerId: req.user,
+      type: contentType,
+      size: req.body.length
+    });
+
+    // Save fragment metadata and data
+    await fragment.save();
+    await fragment.setData(req.body);
+    logger.info(`Fragment ${fragment.id} created for user ${req.user}`);
+
+    // Create Location header URL
+    const apiUrl = process.env.API_URL || `${req.protocol}://${req.get('host')}`;
+    const location = `${apiUrl}/v1/fragments/${fragment.id}`;
+
+    // Return successful response
+    res.status(201)
+      .location(location)
+      .json({
+        status: 'ok',
+        fragment: {
+          id: fragment.id,
+          ownerId: fragment.ownerId,
+          created: fragment.created,
+          updated: fragment.updated,
+          type: fragment.type,
+          size: fragment.size
+        }
+      });
+
+  } catch (error) {
+    // Log the full error object with all details
+    logger.error({ 
+      error: {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        code: error.code,
+        statusCode: error.statusCode,
+        $metadata: error.$metadata
+      },
+      userId: req.user,
+      contentType: req.get('Content-Type')
+    }, 'Error creating fragment - FULL DETAILS');
+    
+    res.status(500).json({
+      status: 'error',
+      error: { code: 500, message: 'Internal Server Error' }
+    });
+  }
+};

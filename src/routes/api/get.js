@@ -1,31 +1,32 @@
-// src/routes/api/get.js
-
-const { createSuccessResponse, createErrorResponse } = require('../../response');
-const Fragment = require('../../model/fragment');
+const { Fragment } = require('../../model/fragment');
 const logger = require('../../logger');
+const { createSuccessResponse, createErrorResponse } = require('../../response');
 
-/**
- * GET /v1/fragments
- * Returns a list of fragments for the authenticated user.
- * If `?expand=1` is passed, returns full metadata for each fragment.
- */
 module.exports = async (req, res) => {
   try {
     const ownerId = req.user;
-    const expand = req.query.expand !== '0';
+    const expand = req.query.expand === '1' || req.query.expand === 'true';
 
     logger.debug({ ownerId, expand }, 'Fetching fragments for user');
 
-    const fragments = await Fragment.byUser(ownerId, expand);
+    // Get fragments from the database
+    let fragments = await Fragment.byUser(ownerId, expand);
+    
+    // Ensure we always return an array, never null or undefined
+    if (!fragments || !Array.isArray(fragments)) {
+      logger.debug({ ownerId, fragmentsReceived: fragments }, 'No fragments found or invalid format, returning empty array');
+      fragments = [];
+    }
 
-    // Sends one single clean success response
+    logger.info({ ownerId, fragmentCount: fragments.length, expand }, 'Successfully retrieved fragments for user');
+    
     res.status(200).json(
       createSuccessResponse({
-        fragments: fragments || [],
+        fragments: fragments,
       })
     );
   } catch (err) {
-    logger.error({ err }, 'Error listing fragments');
+    logger.error({ err, ownerId: req.user }, 'Error listing fragments');
     res.status(500).json(createErrorResponse(500, err.message));
   }
 };

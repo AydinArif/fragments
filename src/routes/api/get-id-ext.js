@@ -1,99 +1,172 @@
-// src/routes/api/get-id-ext.js
-
-const Fragment = require('../../model/fragment');
-const { createErrorResponse } = require('../../response');
+const { Fragment } = require('../../model/fragment');
 const logger = require('../../logger');
 const MarkdownIt = require('markdown-it');
 const md = new MarkdownIt();
-let sharp;
-try {
-  sharp = require('sharp');
-} catch (err) {
-  // sharp may not be installed in some environments; conversions will fail later with 415
-  logger.debug({ err }, 'sharp not available, image conversions disabled');
-}
+const sharp = require('sharp');
+const yaml = require('js-yaml');
 
 module.exports = async (req, res) => {
+  // Prefer explicit route params provided by Express for :id and :ext.
+  // Fall back to parsing a combined id (e.g., "123.html") if needed.
+  let { id, ext } = req.params || {};
+  if (!id && req.params) {
+    // defensive: assign from req.params.id if present
+    id = req.params.id;
+  }
+  if (!ext && id) {
+    // If the route provided a combined id (e.g. "123.html"), extract ext
+    const extMatch = id.match(/\.([a-zA-Z0-9]+)$/);
+    if (extMatch) {
+      ext = extMatch[1];
+      id = id.substring(0, id.lastIndexOf('.'));
+    }
+  }
+  const ownerId = req.user;
+
   try {
-    const ownerId = req.user;
-    const { id } = req.params;
-
-    // Extract extension (e.g., ".html")
-    const ext = req.params.ext.toLowerCase();
-
     const fragment = await Fragment.byId(ownerId, id);
     const data = await fragment.getData();
 
-    if (!data) {
-      return res.status(404).json(createErrorResponse(404, 'No data found'));
+    // If no extension, return original
+    if (!ext) {
+      return res.set('Content-Type', fragment.type).send(data);
     }
 
-    // Only supporting Markdown -> HTML conversion since A2 requirement
-    if (ext === 'html' && fragment.type === 'text/markdown') {
-      const html = md.render(data.toString());
-      res.set('Content-Type', 'text/html');
-      return res.status(200).send(html);
+    // TEXT CONVERSIONS
+
+    // text/plain -> .txt
+    if (fragment.type === 'text/plain' && ext === 'txt') {
+      return res.set('Content-Type', 'text/plain').send(data);
     }
 
-    // If same type (e.g., /1234.md)
-    if (ext === 'md' && fragment.type === 'text/markdown') {
-      res.set('Content-Type', 'text/markdown');
-      return res.status(200).send(data);
-    }
-
-    // JSON -> plain text conversion
-    if ((ext === 'txt' || ext === 'text') && fragment.type === 'application/json') {
-      res.set('Content-Type', 'text/plain');
-      return res.status(200).send(Buffer.from(JSON.stringify(JSON.parse(data.toString()))));
-    }
-
-    // Image conversions using sharp
-    if (fragment.mimeType && fragment.mimeType.startsWith('image/')) {
-      if (!sharp) {
-        return res
-          .status(415)
-          .json(
-            createErrorResponse(415, 'Image conversions are not available in this environment')
-          );
+    // text/markdown -> .md, .html, .txt
+    if (fragment.type === 'text/markdown') {
+      if (ext === 'md') {
+        return res.set('Content-Type', 'text/markdown').send(data);
       }
-
-      // supported target image extensions
-      const supportedExts = ['png', 'jpg', 'jpeg', 'webp'];
-      if (!supportedExts.includes(ext)) {
-        return res
-          .status(415)
-          .json(
-            createErrorResponse(415, `Conversion from ${fragment.type} to .${ext} not supported`)
-          );
+      if (ext === 'html') {
+        const html = md.render(data.toString());
+        return res.set('Content-Type', 'text/html').send(html);
       }
+      if (ext === 'txt') {
+        return res.set('Content-Type', 'text/plain').send(data);
+      }
+    }
 
+    // text/html -> .html, .txt
+    if (fragment.type === 'text/html') {
+      if (ext === 'html') {
+        return res.set('Content-Type', 'text/html').send(data);
+      }
+      if (ext === 'txt') {
+        return res.set('Content-Type', 'text/plain').send(data);
+      }
+    }
+
+    // text/csv -> .csv, .txt, .json
+    if (fragment.type === 'text/csv') {
+      if (ext === 'csv') {
+        return res.set('Content-Type', 'text/csv').send(data);
+      }
+      if (ext === 'txt') {
+        return res.set('Content-Type', 'text/plain').send(data);
+      }
+      if (ext === 'json') {
+        // Simple CSV to JSON conversion (assumes first line is headers)
+        const lines = data.toString().trim().split('\n');
+        if (lines.length < 2) {
+          return res.status(400).json({
+            status: 'error',
+            error: { code: 400, message: 'CSV must have at least a header and one data row' },
+          });
+        }
+        const headers = lines[0].split(',').map((h) => h.trim());
+        const result = lines.slice(1).map((line) => {
+          const values = line.split(',').map((v) => v.trim());
+          const obj = {};
+          headers.forEach((header, i) => {
+            obj[header] = values[i] || '';
+          });
+          return obj;
+        });
+        return res.set('Content-Type', 'application/json').send(JSON.stringify(result, null, 2));
+      }
+    }
+
+    // application/json -> .json, .yaml, .yml, .txt
+    if (fragment.type === 'application/json') {
+      if (ext === 'json') {
+        return res.set('Content-Type', 'application/json').send(data);
+      }
+      if (ext === 'yaml' || ext === 'yml') {
+        try {
+          const jsonData = JSON.parse(data.toString());
+          const yamlData = yaml.dump(jsonData);
+          return res.set('Content-Type', 'application/yaml').send(yamlData);
+        } catch (err) {
+          if (logger && typeof logger.warn === 'function') {
+            logger.warn({ err, id }, 'Error converting JSON to YAML');
+          }
+          return res.status(400).json({
+            status: 'error',
+            error: { code: 400, message: 'Invalid JSON data' },
+          });
+        }
+      }
+      if (ext === 'txt') {
+        return res.set('Content-Type', 'text/plain').send(data);
+      }
+    }
+
+    // application/yaml -> .yaml, .txt
+    if (fragment.type === 'application/yaml') {
+      if (ext === 'yaml' || ext === 'yml') {
+        return res.set('Content-Type', 'application/yaml').send(data);
+      }
+      if (ext === 'txt') {
+        return res.set('Content-Type', 'text/plain').send(data);
+      }
+    }
+
+    // IMAGE CONVERSIONS
+    // All image types -> .png, .jpg, .jpeg, .webp, .gif, .avif
+    const validImageExtensions = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif'];
+    if (fragment.type.startsWith('image/') && validImageExtensions.includes(ext)) {
       try {
-        const input = Buffer.isBuffer(data) ? data : Buffer.from(data);
+        const convertedData = await sharp(data)
+          .toFormat(ext === 'jpg' ? 'jpeg' : ext)
+          .toBuffer();
 
-        // Normalize jpeg ext
-        const target = ext === 'jpg' ? 'jpeg' : ext;
-
-        const converted = await sharp(input).toFormat(target).toBuffer();
-
-        // Set appropriate Content-Type
-        const contentType = `image/${target === 'jpeg' ? 'jpeg' : target}`;
-        res.set('Content-Type', contentType);
-        return res.status(200).send(converted);
+        return res.set('Content-Type', `image/${ext === 'jpg' ? 'jpeg' : ext}`).send(convertedData);
       } catch (err) {
-        logger.error({ err }, 'Image conversion error');
-        return res.status(500).json(createErrorResponse(500, 'Error converting image'));
+        if (logger && typeof logger.warn === 'function') {
+          logger.warn({ err, id, ext }, 'Error converting image');
+        }
+        return res.status(415).json({
+          status: 'error',
+          error: { code: 415, message: 'Unsupported image conversion' },
+        });
       }
     }
 
-    // Unsupported conversion
-    res
-      .status(415)
-      .json(createErrorResponse(415, `Conversion from ${fragment.type} to .${ext} not supported`));
+    // If we reach here, the conversion is not supported
+    return res.status(415).json({
+      status: 'error',
+      error: { code: 415, message: `Cannot convert ${fragment.type} to .${ext}` },
+    });
   } catch (err) {
-    if (err.message === 'Fragment not found') {
-      return res.status(404).json(createErrorResponse(404, 'Fragment not found'));
+    if (logger && typeof logger.warn === 'function') {
+      logger.warn({ err, id }, 'Error getting fragment');
     }
-    logger.error({ err }, 'Error retrieving converted fragment');
-    res.status(500).json(createErrorResponse(500, err.message));
+    if (err.message === 'Fragment not found') {
+      return res.status(404).json({
+        status: 'error',
+        error: { code: 404, message: 'Fragment not found' },
+      });
+    }
+    return res.status(500).json({
+      status: 'error',
+      error: { code: 500, message: err.message },
+    });
   }
 };

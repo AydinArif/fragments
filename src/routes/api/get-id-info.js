@@ -1,28 +1,26 @@
-// src/routes/api/get-id-info.js
-const Fragment = require('../../model/fragment');
-const { createErrorResponse, createSuccessResponse } = require('../../response');
-const logger = require('../../logger');
+
+const { Fragment } = require('../../model/fragment');
 
 module.exports = async (req, res) => {
+  const { id } = req.params;
+  const ownerId = req.user;
   try {
-    const ownerId = req.user;
-    const { id } = req.params;
     const fragment = await Fragment.byId(ownerId, id);
-
-    res.status(200).json(
-      createSuccessResponse({
-        fragment: {
-          id: fragment.id,
-          ownerId: fragment.ownerId,
-          type: fragment.type,
-          size: fragment.size,
-          created: fragment.created,
-          updated: fragment.updated,
-        },
-      })
-    );
-  } catch (err) {
-    logger.error({ err }, 'Error retrieving fragment metadata');
-    res.status(404).json(createErrorResponse(404, 'Fragment not found'));
+    res.status(200).json({
+      status: 'ok',
+      fragment: {
+        id: fragment.id,
+        ownerId: fragment.ownerId,
+        created: fragment.created,
+        updated: fragment.updated,
+        type: fragment.type,
+        size: fragment.size
+      }
+    });
+  } catch {
+    res.status(404).json({
+      status: 'error',
+      error: { code: 404, message: 'Fragment not found' }
+    });
   }
 };
